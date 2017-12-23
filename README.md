@@ -8,5 +8,5 @@ Currently in alpha; a basic proof of concept exists but a more sophisticated int
 ## License
 
 This code is publicly licensed under the GNU GPL 3.0.
-If your project needs a license compatible with proprietary code, please contact me at dwillbarron <at> gmail (dot) com.
+If your project needs a license compatible with proprietary code, please contact me at dwillbarron \<at\> gmail (dot) com.
 
