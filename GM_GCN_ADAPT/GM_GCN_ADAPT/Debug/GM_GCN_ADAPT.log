@@ -1,9 +1,0 @@
-﻿  GM_GCN_ADAPT.cpp
-d:\include\libusb-1.0\libusb.h(738): warning C4200: nonstandard extension used: zero-sized array in struct/union
-  d:\include\libusb-1.0\libusb.h(738): note: This member will be ignored by a defaulted constructor or copy/move assignment operator
-d:\include\libusb-1.0\libusb.h(769): warning C4200: nonstandard extension used: zero-sized array in struct/union
-  d:\include\libusb-1.0\libusb.h(769): note: This member will be ignored by a defaulted constructor or copy/move assignment operator
-d:\include\libusb-1.0\libusb.h(1265): warning C4200: nonstandard extension used: zero-sized array in struct/union
-  d:\include\libusb-1.0\libusb.h(1265): note: This member will be ignored by a defaulted constructor or copy/move assignment operator
-  GM_GCN_ADAPT.vcxproj -> D:\works\scratchcpp\GM_GCN_ADAPT\Debug\GM_GCN_ADAPT.dll
-  GM_GCN_ADAPT.vcxproj -> D:\works\scratchcpp\GM_GCN_ADAPT\Debug\GM_GCN_ADAPT.pdb (Partial PDB)
