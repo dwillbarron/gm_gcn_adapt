@@ -13,7 +13,7 @@ if (variable_global_exists("__gca_initialized")) return 1;
 global.__gca_initialized = 1;
 
 // ================
-//     Settings
+//     Settings 
 // ================
 // Feel free to change variables here to suit your preferences.
 // However, change them during runtime at your own peril.
@@ -41,10 +41,11 @@ global.__gca_force_enable_rumble = true;
 // The first byte of the controller data is some status info.
 // From here, we have the device type and whether rumble is
 // available. (note that it can be used anyway).
-// TODO: More likely exist.
+// TODO: Bongos might be something different.
 enum gca_status {
     rumble = 4,
-    wired = 16
+    wired = 16,
+    wavebird = 32 // from some old notes; I can't test this currently.
 }
 
 enum gca_btn {
@@ -86,6 +87,7 @@ global.__gca_bits[gca_btn.dp_up] = 128;
 global.__gca_bits[gca_btn.dp_right] = 32;
 global.__gca_bits[gca_btn.dp_left] = 16;
 global.__gca_bits[gca_btn.dp_down] = 64;
+
 
 // ================
 //   End Constants
@@ -223,8 +225,8 @@ for (i = 0; i < 4; i++) {
     
     // has the controller just been plugged in?
     // (x+y+start makes controller appear unplugged)
-    if (controller[? 'device_status_prev'] & gca_status.wired == 0 &&
-        controller[? 'device_status'] & gca_status.wired != 0) {
+    if (!__gca_present_internal(i, true) &&
+        __gca_present_internal(i, false)) {
         // we're centering around zero so we can actually just negate everything
         centers = array_create(6);
         // (except the triggers, since they rest at zero)
@@ -267,7 +269,7 @@ for (i = 0; i < 4; i++) {
     var num_str, state;
     controller = global.__gca_controllers[i];
     state = controller[? 'rumble_state'];
-    if (controller[? 'device_status'] & gca_status.rumble == 0) {
+    if ((controller[? 'device_status'] & gca_status.rumble) == 0) {
         state = false;
     }
     num_str = string(state);
@@ -395,3 +397,21 @@ device = argument0 - global.__gca_one_indexed;
 controller = global.__gca_controllers[device];
 
 return (controller[? 'device_status'] & gca_status.rumble != 0)
+#define __gca_present_internal
+// __gca_present_internal(index, prev)
+// For internal use only (always zero indexed)
+// Need to detect the presence of a controller?
+// You might be looking for gca_controller_present.
+
+var device = argument0;
+var controller = global.__gca_controllers[device];
+var prev = argument1;
+var status;
+if (prev == true) {
+    status = controller[? 'device_status_prev'];
+}
+else {
+    status = controller[? 'device_status'];
+}
+
+return ((status && gca_status.wired) || (status && gca_status.wavebird));

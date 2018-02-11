@@ -73,6 +73,8 @@ else {
         pos += 12;
         draw_text(i * 100, pos, gca_controller_present(i));
         pos += 12;
+        draw_text(i * 100, pos, string_insert("RMB ", string(gca_rumble_available(i)), 0));
+        pos += 12;
         draw_text(i * 100, pos, string_insert("LX ", string(gca_get_axis(i, gca_axis.lstick_x)), 0));
         pos += 12;
         draw_text(i * 100, pos, string_insert("LY ", string(gca_get_axis(i, gca_axis.lstick_y)), 0));
@@ -114,6 +116,7 @@ else {
         gca_set_rumble(i, gca_get_button(i, gca_btn.a));
 
     }
+    gca_end_tick();
     
 }
 </string>
