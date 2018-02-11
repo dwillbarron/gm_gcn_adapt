@@ -53,12 +53,13 @@ self.result1 = gca_attach();
           <argument>
             <kind>1</kind>
             <string>draw_set_color(make_color_rgb(0, 0, 0));
-var result;
-result = gca_begin_tick();
+var tick_result;
+tick_result = gca_begin_tick();
 
-if (result &lt; 0) {
-    draw_text(0, 0, result);
-    result = gca_attach();
+if (tick_result &lt; 0) {
+    draw_text(0, 0, tick_result);
+    self.result = gca_attach();
+    draw_text(0, 16, self.result);
 }
 else {
     draw_text(0, 0, global.__gca_last_frame);
