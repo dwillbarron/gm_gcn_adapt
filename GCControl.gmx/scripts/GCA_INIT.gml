@@ -146,7 +146,7 @@ return result;
 
 #define gca_detach
 // gca_detach()
-// Returns: (real) (see below)
+// Returns: 0
 
 // Detach from a currently connected gamecube adapter.
 
