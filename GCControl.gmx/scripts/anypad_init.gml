@@ -1,16 +1,20 @@
 #define anypad_init
 // anypad_init()
-// call this once on startup.
+// call this once on startup. don't call it again.
 // calling it again will disappoint your parents.
 
 /*
-    Initialization
+    Initial State
 */
 // initialize slots for 4 controllers (make configurable?)
 global.__anypad_controllers = array_create(4);
+var i = 0;
+for (i = 0; i < array_length(global.__anypad_controllers); i+=1) {
+    global.__anypad_controllers[i] = ds_map_create();
+}
 
 // gcn adapter state
-global.__anypad_enable_gcn = false;
+global.__anypad_enable_gca = false;
 global.__anypad_gca_status = 0;
 
 // native state
@@ -18,10 +22,16 @@ global.__anypad_enable_native_xinput = false;
 global.__anypad_enable_native_dinput = false;
 
 /*
+    GC Adapter Initialization
+*/
+gca_init();
+
+/*
     Enums and Constants
 */
 
 // dualshock4 inputs in comments
+// Nintendo controllers swap A/B, X/Y. Not sure what to do here.
 enum anypad_btn {
     a, // cross
     b, // circle
@@ -32,7 +42,7 @@ enum anypad_btn {
     ls_click, // l3
     rs_click, // r3
     start, // options
-    back, // share on pc
+    back, // share (on PC at least)
     dp_up,
     dp_right,
     dp_down,
@@ -73,7 +83,7 @@ enum anypad_glyph_sets {
 // controls as well.
 enum anypad_form_factors {
     STANDARD, // xbox, ps4, and similar
-    STANDARD_DIGITAL_TRIGGERS, // wii u and switch controllers (why'd nintendo do this?)
+    STANDARD_DIGITAL_TRIGGERS, // wii u and switch controllers
     GAMECUBE,
     STEAM, // Only matters if we use the Steam Controller API; otherwise it's just STANDARD.
     DETACHED_JOYCON // Assuming you port to Switch somebody's bound to try this.
@@ -85,15 +95,32 @@ enum anypad_form_factors {
 
 // Call this method once per frame; this updates the state of the GC adapter if enabled.
 
-// TODO: GCA update state
+global.__anypad_gca_status = gca_begin_tick();
 
-// TODO: GCA recover from error/unplugged
 
 #define anypad_set_enable_gcn
 // anypad_set_enable_gcn(bool): int result
 // Enable support for gamecube controllers
 
-global.__anypad_enable_gcn = argument0;
+// If the adapter becomes unplugged, you can
+// try to reconnect by calling this again.
+
+var enable = argument0;
+
+global.__anypad_enable_gca = enable;
+
+
+if (enable) {
+    global.__anypad_gca_status = gca_attach();
+    return global.__anypad_gca_status;
+}
+else {
+    // has no effect if not attached (in theory)
+    global.__anypad_gca_status = gca_detach();
+}
+
+
+
 
 #define anypad_set_enable_native_xinput
 // anypad_set_enable_native_xinput(bool): int result
