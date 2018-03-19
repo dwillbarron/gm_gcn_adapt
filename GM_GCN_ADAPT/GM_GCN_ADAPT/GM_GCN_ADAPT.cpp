@@ -170,10 +170,15 @@ GM_GCN_ADAPT_API double attach_adapter(void)
 
 GM_GCN_ADAPT_API double release_adapter(void) 
 {
+	// safeguard to prevent crashes
+	if (!driver_connected) {
+		return 0.0;
+	}
+
+	// don't forget to turn off all rumbles
 	update_rumble("0000");
 	driver_connected = false;
 	if (adapter_handle != NULL) {
-		// don't forget to turn off all rumbles
 		libusb_release_interface(adapter_handle, 0);
 		libusb_close(adapter_handle);
 	}
