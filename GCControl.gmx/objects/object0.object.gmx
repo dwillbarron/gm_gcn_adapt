@@ -60,6 +60,13 @@ if (tick_result &lt; 0) {
     draw_text(0, 0, tick_result);
     self.result = gca_attach();
     draw_text(0, 16, self.result);
+    var ret1 = __anypad_split_id("A,12");
+    var ret2 = __anypad_split_id("QCW, 152");
+    draw_text(0, 32, ret1[0]);
+    draw_text(0, 48, ret1[1]);
+    draw_text(0, 64, ret2[0]);
+    draw_text(0, 80, ret2[1]);
+    
 }
 else {
     draw_text(0, 0, global.__gca_last_frame);
