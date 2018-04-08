@@ -3,16 +3,6 @@
 // call this once on startup. don't call it again.
 // calling it again will disappoint your parents.
 
-/*
-    Initial State
-*/
-// initialize slots for 4 controllers (make configurable?)
-global.__anypad_controllers = array_create(4);
-var i = 0;
-for (i = 0; i < array_length(global.__anypad_controllers); i+=1) {
-    global.__anypad_controllers[i] = ds_map_create();
-}
-
 // gcn adapter state
 global.__anypad_enable_gca = false;
 global.__anypad_gca_status = 0;
@@ -76,31 +66,39 @@ enum anypad_glyph_sets {
     GENERIC // an unknown controller, probably some weird DInput thing.
 }
 
-// Form factor is a bit misleading--this classifies any controllers
-// with significant divergence in featureset.
-
-// Used internally to handle behaviors, can be used to determine default
-// controls as well.
-enum anypad_form_factors {
-    STANDARD, // xbox, ps4, and similar
-    STANDARD_DIGITAL_TRIGGERS, // wii u and switch controllers
-    GAMECUBE,
-    STEAM, // Only matters if we use the Steam Controller API; otherwise it's just STANDARD.
-    DETACHED_JOYCON // Assuming you port to Switch somebody's bound to try this.
-};
-
 #define anypad_tick
 // anypad_tick(): int result
 // result = 0 for no error; nonzero indicates some error.
 
 // Call this method once per frame; this updates the state of the GC adapter if enabled.
 
-global.__anypad_gca_status = gca_begin_tick();
+if (global.__anypad_enable_gca) {
+    global.__anypad_gca_status = gca_begin_tick();
+    // check if error, attempt reconnect
+    if (global.__anypad_gca_status != 0) {
+        gca_detach();
+        global.__anypad_gca_status  = gca_attach();
+    }
+}
 
+#define anypad_set_enable_native_xinput
+// anypad_set_enable_native_xinput(bool): int result
+// enable native controllers 0 - 3, which corresponds to 
+// xinput devices on windows
 
-#define anypad_set_enable_gcn
+global.__anypad_enable_native_xinput = argument0;
+
+#define anypad_set_enable_native_dinput
+// anypad_set_enable_native_dinput(bool): int result
+// enable native controllers 4 - 11, which corresponds to 
+// dinput devices on windows
+
+global.__anypad_enable_native_dinput = argument0;
+
+#define anypad_set_enable_gca
 // anypad_set_enable_gcn(bool): int result
 // Enable support for gamecube controllers
+// controllers are placed at slots 12-15
 
 // If the adapter becomes unplugged, you can
 // try to reconnect by calling this again.
@@ -122,72 +120,76 @@ else {
 
 
 
-#define anypad_set_enable_native_xinput
-// anypad_set_enable_native_xinput(bool): int result
-// enable native controllers 0 - 3, which corresponds to xinput devices
+#define anypad_detect_glyph_set
+// __anypad_detect_glyph_set(index)
+// attempts to detect the most likely glyph set of a controller
+// given its device description
 
-global.__anypad_enable_native_xinput = argument0;
+var index = argument0;
 
-#define anypad_set_enable_native_dinput
-// anypad_set_enable_native_dinput(bool): int result
-// enable native controllers 4 - 11, which corresponds to dinput devices
+var desc = anypad_get_description(index);
 
-global.__anypad_enable_native_dinput = argument0;
-
-#define anypad_get_controller_id
-// anypad_get_controller_controller_id(slot: real)
-// get the ID of the controller in a given slot
-
-var slot = argument0;
-
-
-
-#define __anypad_is_native
-// __anypad_is_native(slot: real): boolean
-// returns true if controller in given slot is accessed through GM's native APIs.
-
-var slot = argument0;
-
-#define __anypad_is_native_by_id
-// __anypad_is_native_by_controller_id(controller_id: str): boolean
-// returns true if the controller at ID is accessed through GM's native APIs.
-
-var controller_controller_id = argument0;
-
-#define __anypad_detect_glyph_set
-// __anypad_detect_glyph_set(controller_id: str)
-// for internal use only.
-// given a controller ID, detect the glyph set
-
-#define __anypad_split_id
-// __anypad_split_controller_id(controller_id: str) -> [type, index]
-// for internal usage
-// splits an controller_id into its interface controller_identifier and the device index.
-
-// anypad IDs are in the format "Str,Int" where Str controller_identifies the
-// interface and the int controller_identifies the index on that interface.
-// I don't suggest you manually make IDs, but it might be useful for debugging.
-
-var controller_id = argument0;
-
-// note that GM one-indexes strings (gross).
-var commaIndex = 0;
-var leftString = "";
-var rightString = "";
-
-commaIndex = string_pos(",", controller_id);
-// 0 indicates no comma found
-if (commaIndex == 0) {
-    show_error(string_insert("ID provcontroller_ided has no comma: ", controller_id, 0), true);
+if (desc = "Gamecube Controller (Native)") {
+    return anypad_glyph_sets.GAMECUBE;
 }
-if (commaIndex == 1) {
-    show_error("left scontroller_ide of ID is empty!", true);
+// TODO: controller detection logic goes here
+else {
+    return anypad_glyph_sets.XBOX_360;
 }
 
-leftString = string_copy(controller_id, 1, commaIndex - 1);
-rightString = string_copy(controller_id, commaIndex + 1, string_length(controller_id) - (commaIndex));
+#define anypad_is_connected
+// anypad_is_connected(index)
+// returns true if a device is present at this index
 
-var returnArray = array_create(2);
-returnArray[0] = leftString;
-returnArray[1] = rightString;
-return returnArray;
+var index = argument0;
+
+// native range
+if (index >= 0 && index <= 11) {
+    if (global.__anypad_enable_native_xinput && index <= 3) {
+        return gamepad_is_connected(index);
+    }
+    else if (global.__anypad_enable_native_dinput && index >= 4) {
+        return gamepad_is_connected(index);
+    }
+}
+
+// gca range
+if (index >= 12 && index <= 15) {
+    if (global.__anypad_enable_gca && 
+        global.__anypad_gca_status >= 0) 
+    {
+        return gca_controller_present(index - 12);
+    }
+    else {
+        return false;
+    }
+}
+
+// no conditions met; index probably out of bounds
+return false;
+
+#define anypad_get_description
+// anypad_get_description(index)
+
+var index = argument0;
+
+if (index >= 0 && index <= 11) {
+    return gamepad_get_description(index);
+}
+if (index >= 12 && index <= 15) {
+    return "Gamecube Controller (Native)";
+}
+
+return ""
+#define __anypad_range_native
+// __anypad_range_native(index)
+// internal usage only
+// for convenience if GM's numbers change (i.e. different platforms)
+
+return (argument0 >= 0 && argument0 <= 11)
+
+#define __anypad_range_gca
+// __anypad_range_gca(index)
+// internal use only
+
+return (argument0 >= 12 && argument0 <= 15)

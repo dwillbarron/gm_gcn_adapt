@@ -16,7 +16,8 @@
     <script>scripts\anypad_init.gml</script>
   </scripts>
   <objects name="objects">
-    <object>objects\object0</object>
+    <object>objects\gca_sample</object>
+    <object>objects\anypad_sample</object>
   </objects>
   <rooms name="rooms">
     <room>rooms\room0</room>
