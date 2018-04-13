@@ -6,6 +6,8 @@
 // gcn adapter state
 global.__anypad_enable_gca = false;
 global.__anypad_gca_status = 0;
+// gc controllers live in 12-15
+global.__anypad_gca_offset = 12;
 
 // native state
 global.__anypad_enable_native_xinput = false;
@@ -52,7 +54,7 @@ enum anypad_axis {
 // that we might be expected to display.
 // The library should ultimately be responsible for determining
 // what class each controller falls in to.
-enum anypad_glyph_sets {
+enum anypad_glyph {
     XBOX_ONE, // similar but slightly different to 360 controller.
     XBOX_360, // start/back buttons, slightly different face buttons
     PAIRED_JOYCONS, // two joycons together (nintendo switch)
@@ -64,6 +66,22 @@ enum anypad_glyph_sets {
     GAMECUBE, // gamecube controller (via adapter support)
     STEAM, // valve's controller that looks like darth vader
     GENERIC // an unknown controller, probably some weird DInput thing.
+}
+
+// This enum is for every device type that this library can handle.
+// I've tried to get these numbers to match up to what's used elsewhere
+// in your code--let me know if there's any flaws
+enum anypad_type {
+    XINPUT,
+    GC_VJOY,
+    GC_MAYFLASH,
+    PS4, // and other imilar controllers
+    GC_64, // not v3
+    GC_GAME, // what is this?
+    GC_64_V3,
+    SWITCH_PRO,
+    GC_NATIVE,
+    UNKNOWN
 }
 
 #define anypad_tick
@@ -120,21 +138,76 @@ else {
 
 
 
-#define anypad_detect_glyph_set
-// __anypad_detect_glyph_set(index)
-// attempts to detect the most likely glyph set of a controller
-// given its device description
+#define anypad_detect_controller_type
+// __anypad_detect_controller_type(index)
+// attempts to detect the button layout of a controller
+// based on its name.
 
 var index = argument0;
 
 var desc = anypad_get_description(index);
 
-if (desc = "Gamecube Controller (Native)") {
-    return anypad_glyph_sets.GAMECUBE;
+if (desc == "Gamecube Controller (Native)") {
+    return anypad_type.GC_NATIVE;
 }
-// TODO: controller detection logic goes here
-else {
-    return anypad_glyph_sets.XBOX_360;
+
+if (argument0 == -1) return 0;
+var controller_name = string_lower(gamepad_get_description(argument0));
+
+//show_debug_message("Found Controller of type " + controller_name);
+
+if (
+    controller_name == "wireless controller"
+    || string_count("fighting stick",controller_name) > 0
+    || string_count("qanba joystick",controller_name) > 0
+    || string_count("usb joystick",controller_name) > 0
+    || string_count("usb vibration joystick",controller_name) > 0
+    || string_count("logitech cordless rumblepad",controller_name) > 0
+    || string_count("logitech dual",controller_name) > 0
+    || string_count("dual box w",controller_name) > 0
+    || string_count("playstation",controller_name) > 0
+    || string_count("usb joypad",controller_name) > 0
+    || string_count("4 axis",controller_name) > 0
+    || string_count("virtual game controller",controller_name) > 0
+    || string_count("wiiu pro",controller_name) > 0 // This maybe should move
+    || string_count("fighting commander",controller_name) > 0
+    || string_count("cerberus",controller_name) > 0
+    || string_count("real arcade pro",controller_name) > 0
+    )
+    return anypad_type.PS4;
+
+else if (string_count("vjoy",controller_name) > 0)
+    return anypad_type.GC_VJOY;
+
+else if (string_count("no such device",controller_name) > 0){
+    global.disconnected_wiiu_cont[argument0] = true;
+    return anypad_type.GC_VJOY;
+}
+else if (
+    string_count("may",controller_name) > 0
+    || (string_count("usb gamepad",controller_name) > 0 && string_count("xusb",controller_name) <= 0)
+    || string_count("gamecube",controller_name) > 0
+    || string_count("6 axis 16 button",controller_name) > 0
+    || string_count("hyperkin",controller_name) > 0
+    || string_count("shinewave",controller_name) > 0
+)
+{
+    return anypad_type.GC_MAYFLASH;
+}
+else if (string_count("gc/n64",controller_name) > 0){
+    if (string_count("v3.",controller_name) > 0)
+        return anypad_type.GC_64_V3;
+    else
+        return anypad_type.GC_64;
+}
+else if (string_count("gc game",controller_name) > 0){
+    return anypad_type.GC_GAME;
+}
+else if (string_count("pro controller",controller_name) > 0){
+    return anypad_type.SWITCH_PRO;
+}
+else { //default to unknown
+    return anypad_type.UNKNOWN;
 }
 
 #define anypad_is_connected
