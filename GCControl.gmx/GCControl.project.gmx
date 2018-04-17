@@ -13,7 +13,11 @@
   <paths name="paths"/>
   <scripts name="scripts">
     <script>scripts\gca_init.gml</script>
-    <script>scripts\anypad_init.gml</script>
+    <scripts name="anypad">
+      <script>scripts\anypad_internal_functions.gml</script>
+      <script>scripts\anypad_config_functions.gml</script>
+      <script>scripts\anypad_gamepad_functions.gml</script>
+    </scripts>
   </scripts>
   <objects name="objects">
     <object>objects\gca_sample</object>
