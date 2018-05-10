@@ -27,6 +27,7 @@
             <kind>1</kind>
             <string>//Init stuff
 gca_init();
+self.tick_result = -1;
 
 self.result1 = gca_attach();
 //show_debug_message(string_insert("result 1: ", string(self.result1), 0));
@@ -52,18 +53,14 @@ self.result1 = gca_attach();
         <arguments>
           <argument>
             <kind>1</kind>
-            <string>draw_set_color(make_color_rgb(0, 0, 0));
-var tick_result;
-tick_result = gca_begin_tick();
+            <string>///Test Drawing
+draw_set_color(make_color_rgb(0, 0, 0));
 
-if (tick_result &lt; 0) {
-    draw_text(0, 0, tick_result);
+self.tick_result = gca_begin_tick();
+if (self.tick_result &lt; 0) {
+    draw_text(0, 0, self.tick_result);
     self.result = gca_attach();
     draw_text(0, 16, self.result);
-    draw_text(0, 32, ret1[0]);
-    draw_text(0, 48, ret1[1]);
-    draw_text(0, 64, ret2[0]);
-    draw_text(0, 80, ret2[1]);
     
 }
 else {
@@ -119,6 +116,12 @@ else {
         pos += 12;
         draw_text(i * 100, pos, controller[? 'buttons']);
         pos += 12;
+        var center = controller[? 'axis_center']
+        draw_text(i * 100, pos, center[0]);
+        pos += 12;
+        draw_text(i * 100, pos, controller[? 'calibration_state']);
+        pos += 12;
+        draw_text(i * 100, pos, controller[? 'calibration_time']);
         gca_set_rumble(i, gca_get_button(i, gca_btn.a));
 
     }

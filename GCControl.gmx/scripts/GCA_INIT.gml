@@ -1,5 +1,5 @@
 #define gca_init
-// gca_init()
+///gca_init()
 // Returns: (real) (see below)
 // Call this once to initialize the internal state of the library.
 // Return Values:
@@ -30,6 +30,17 @@ global.__gca_one_indexed = 0;
 // set to true at your own risk.
 // can cause the adapter to fail if too many rumbles active
 global.__gca_force_enable_rumble = true;
+
+// time (in microseconds) until the controller is calibrated.
+// At least one frame's time is needed to avoid miscalibration
+// as the adapter will report all zeroes for its first frame.
+
+// Longer time intervals allow capacitor-modded controllers
+// to level out before centering. Users might prematurely
+// push the sticks though.
+
+// Default: 0 microseconds. Increase it if users complain.
+global.__gca_calibration_time = 0;
 
 // ================
 //   End Settings
@@ -72,6 +83,13 @@ enum gca_axis {
     r_analog
 }
 
+enum gca_cal {
+    NONE,
+    WAIT,
+    DONE
+}
+
+
 // Bitmasks for each button
 global.__gca_bits[12] = 0; // preallocate some space
 // TODO: Fill out bitmasks
@@ -110,6 +128,10 @@ for (i = 3; i >= 0; i--) {
     controller[? 'rumble_state'] = false;
     controller[? 'device_status'] = 0;
     controller[? 'device_status_prev'] = 0; //to detect plug/unplug
+    
+    // Calibration states:
+    controller[? 'calibration_state'] = 93;
+    controller[? 'calibration_time'] = 0;
     // gml can't handle nested accessors. ugh.
     var j, axes, centers;
     for (j = 5; j >= 0; j--) {
@@ -125,7 +147,7 @@ for (i = 3; i >= 0; i--) {
 return 0;
 
 #define gca_attach
-// gca_attach()
+///gca_attach()
 // Returns: (real) see below
 
 // Find the first connected gamecube adapter and connect to it.
@@ -145,7 +167,7 @@ result = GM_GCN_ADAPT_Attach();
 return result;
 
 #define gca_detach
-// gca_detach()
+///gca_detach()
 // Returns: 0
 
 // Detach from a currently connected gamecube adapter.
@@ -157,7 +179,7 @@ result = GM_GCN_ADAPT_Release();
 return result;
 
 #define gca_begin_tick
-// gca_begin_tick()
+///gca_begin_tick()
 // Returns: (real) 0 for success, negative for any errors
 // Call once per frame before using the controllers.
 // Polls the adapter for updated input information.
@@ -223,21 +245,46 @@ for (i = 0; i < 4; i++) {
     axes[gca_axis.lstick_y] = frame[1 + (i * 9) + 4];
     axes[gca_axis.lstick_x] = frame[1 + (i * 9) + 3];
     
+    // Is a controller plugged in here at all?
+    if (!__gca_present_internal(i, false)) {
+        // Reset the calibration state.
+        controller[? 'calibration_state'] = gca_cal.NONE;
+        controller[? 'calibration_time'] = 0;
+    }
+    
     // has the controller just been plugged in?
     // (x+y+start makes controller appear unplugged)
-    if (!__gca_present_internal(i, true) &&
-        __gca_present_internal(i, false)) {
-        // we're centering around zero so we can actually just negate everything
-        centers = array_create(6);
-        // (except the triggers, since they rest at zero)
-        centers[gca_axis.r_analog] = (-axes[gca_axis.r_analog] / 2) - 128;
-        centers[gca_axis.l_analog] = (-axes[gca_axis.l_analog] / 2) - 128;
-        centers[gca_axis.lstick_x] = -axes[gca_axis.lstick_x];
-        centers[gca_axis.lstick_y] = -axes[gca_axis.lstick_y];
-        centers[gca_axis.cstick_x] = -axes[gca_axis.cstick_x];
-        centers[gca_axis.cstick_y] = -axes[gca_axis.cstick_y];
-        controller[? 'axis_center'] = centers;
+    // (checks !prev, then current state)
+    if (!__gca_present_internal(i, true) && // check previous state
+        __gca_present_internal(i, false))   // check current state
+    { 
+        // Begin calibration process
+        
+        controller[? 'calibration_state'] = gca_cal.WAIT;
+        controller[? 'calibration_time'] = 0;
     }
+    
+    // Calibration currently in progress?
+    if (controller[? 'calibration_state'] == gca_cal.WAIT) {
+        // Are we done?
+    
+        if (controller[? 'calibration_time'] >= global.__gca_calibration_time) {
+            centers = array_create(6);
+            // triggers need special treatment since they're centered around 0 of 255
+            centers[gca_axis.r_analog] = (-axes[gca_axis.r_analog] / 2) - 128;
+            centers[gca_axis.l_analog] = (-axes[gca_axis.l_analog] / 2) - 128;
+            centers[gca_axis.lstick_x] = -axes[gca_axis.lstick_x];
+            centers[gca_axis.lstick_y] = -axes[gca_axis.lstick_y];
+            centers[gca_axis.cstick_x] = -axes[gca_axis.cstick_x];
+            centers[gca_axis.cstick_y] = -axes[gca_axis.cstick_y];
+            controller[? 'axis_center'] = centers;
+            controller[? 'calibration_state'] = gca_cal.DONE;
+        }
+        else {
+            controller[? 'calibration_time'] += delta_time;
+        }
+    }
+    
     // do the buttons in little endian order.
     // doesn't matter as long as I'm consistent
     new_buttons = frame[1 + (i * 9) + 2] * 256;
@@ -257,7 +304,7 @@ for (i = 0; i < 4; i++) {
 return result;
 
 #define gca_end_tick
-// gca_end_tick()
+///gca_end_tick()
 // Returns: (real) 0 for success, negative for any errors
 // Call once at the end of each frame.
 // Pushes updated rumble commands to each controller.
@@ -280,7 +327,7 @@ result = GM_GCN_ADAPT_Send_Rumble(rumble_str);
 return result;
 
 #define gca_set_rumble
-// gca_set_rumble(device, state)
+///gca_set_rumble(device, state)
 // device: (real) index of controller to change rumble state
 // state: (boolean) true to rumble, false to stop
 // Returns (real) 0 for success, negative value for any errors
@@ -300,7 +347,7 @@ controller = global.__gca_controllers[device];
 controller[? 'rumble_state'] = state;
 
 #define gca_controller_present
-// gca_controller_present(device)
+///gca_controller_present(device)
 // device: index of controller
 // Returns: (boolean) true if controller plugged in, false otherwise.
 
@@ -316,7 +363,7 @@ controller = global.__gca_controllers[device];
 return (controller[? 'device_status'] & gca_status.wired) != 0;
 
 #define gca_get_button
-// gca_button(device, button)
+///gca_button(device, button)
 // device: (real) index of controller
 // button: index of button or dpad direction, see below
 // returns: (boolean) true if pressed, false if unpressed
@@ -326,13 +373,14 @@ return (controller[? 'device_status'] & gca_status.wired) != 0;
 
 var device, controller, buttons, button;
 device = argument0 - global.__gca_one_indexed;
-button = argument1
+button = argument1;
 controller = global.__gca_controllers[device];
 buttons = controller[? 'buttons'];
-return (buttons & global.__gca_bits[button]) != 0
+
+return (buttons & global.__gca_bits[button]) != 0;
 
 #define gca_get_pressed
-// gca_get_pressed(device, button)
+///gca_get_pressed(device, button)
 // device: (real) index of controller
 // button: index of button or dpad direction, see gca_button
 // returns: (boolean) true if just pressed, else false.
@@ -349,7 +397,7 @@ button = argument1;
 return (buttons & global.__gca_bits[button] != 0) && (buttons_prev & global.__gca_bits[button] == 0);
 
 #define gca_get_released
-// gca_get_released(device, button)
+///gca_get_released(device, button)
 // device: (real) index of controller
 // button: index of button or dpad direction, see gca_button
 // returns: (boolean) true if just pressed, else false.
@@ -366,24 +414,29 @@ button = argument1;
 return (buttons & global.__gca_bits[button] == 0) && (buttons_prev & global.__gca_bits[button] != 0);
 
 #define gca_get_axis
-// gca_get_axis(device, axis_index): real
+///gca_get_axis(device, axis_index): real
 // device: (real) index of controller
 // axis_index: (real) index of axis (see below)
-// Returns: (real) from -1 to 1 for sticks, 0 to 1 for triggers
+// Returns: (real) from -1 to 1
 
-var device, axis_index, controller, axes, centers, adjusted, scaled;
-device = argument0 - global.__gca_one_indexed;
-axis_index = argument1;
-controller = global.__gca_controllers[device]
-axes = controller[? 'axis'];
-centers = controller[? 'axis_center'];
-adjusted = axes[axis_index] + centers[axis_index];
-scaled = adjusted / 128;
+var device = argument0 - global.__gca_one_indexed;
+var axis_index = argument1;
+var controller = global.__gca_controllers[device];
 
-return clamp(scaled, -255, 255);
+if (controller[? 'calibration_state'] != gca_cal.DONE) {
+    // the controller hasn't been calibrated yet.
+    return 0;
+}
+
+var axes = controller[? 'axis'];
+var centers = controller[? 'axis_center'];
+var adjusted = axes[axis_index] + centers[axis_index];
+var scaled = adjusted / 128;
+
+return clamp(scaled, -1, 1);
 
 #define gca_rumble_available
-// gca_rumble_available(device)
+///gca_rumble_available(device)
 
 // Check whether the given controller has sufficient power for rumble
 // (This generally applies to all controllers at once, and
@@ -397,8 +450,9 @@ device = argument0 - global.__gca_one_indexed;
 controller = global.__gca_controllers[device];
 
 return (controller[? 'device_status'] & gca_status.rumble != 0)
+
 #define __gca_present_internal
-// __gca_present_internal(index, prev)
+///__gca_present_internal(index, prev)
 // For internal use only (always zero indexed)
 // Need to detect the presence of a controller?
 // You might be looking for gca_controller_present.
@@ -413,5 +467,5 @@ if (prev == true) {
 else {
     status = controller[? 'device_status'];
 }
-
-return ((status && gca_status.wired) || (status && gca_status.wavebird));
+show_debug_message(((status & gca_status.wired) || (status & gca_status.wavebird)));
+return ((status & gca_status.wired) || (status & gca_status.wavebird));

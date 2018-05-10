@@ -22,9 +22,11 @@
   <objects name="objects">
     <object>objects\gca_sample</object>
     <object>objects\anypad_sample</object>
+    <object>objects\tester</object>
   </objects>
   <rooms name="rooms">
     <room>rooms\room0</room>
+    <room>rooms\room1</room>
   </rooms>
   <help>
     <rtf>help.rtf</rtf>
