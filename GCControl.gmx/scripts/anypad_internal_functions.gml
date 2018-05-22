@@ -1,8 +1,7 @@
 #define anypad_internal_functions
 // Anypad Internal Functions
 
-// Hopefully, outside of debugging you shouldn't need to
-// use these functions.
+// Hopefully you shouldn't need to see these.
 
 #define anypad_detect_controller_type
 // __anypad_detect_controller_type(index)
@@ -84,12 +83,7 @@ var index = argument0;
 
 // native range
 if (index >= 0 && index <= 11) {
-    if (global.__anypad_enable_native_xinput && index <= 3) {
-        return gamepad_is_connected(index);
-    }
-    else if (global.__anypad_enable_native_dinput && index >= 4) {
-        return gamepad_is_connected(index);
-    }
+    return gamepad_is_connected(index);
 }
 
 // gca range
@@ -132,8 +126,8 @@ return (argument0 >= 0 && argument0 <= 11)
 // internal use only
 
 return (argument0 >= 12 && argument0 <= 15)
-#define anypad_map_gca_axis
-// anypad_map_gca_axis(axis)
+#define anypad_gca_map_axis
+///anypad_map_gca_axis(axis)
 // map GM axis to GCA axis
 
 var axis = argument0;
@@ -146,13 +140,15 @@ if (axis == gp_axisrh)
     return gca_axis.cstick_x;
 if (axis == gp_axisrv)
     return gca_axis.cstick_y;
-if (axis == gp_shoulderlb) // is this right?
+if (axis == gp_shoulderlb)
     return gca_axis.l_analog;
 if (axis == gp_shoulderrb)
     return gca_axis.r_analog;
+    
+return -1;
 
-#define anypad_map_gca_button
-// anypad_map_gca_button(button)
+#define anypad_gca_map_button
+///anypad_gca_map_button(button)
 // map GM button to GCA button.
 
 var button = argument0;
@@ -165,8 +161,6 @@ if (button == gp_face3)
     return gca_btn.x;
 if (button == gp_face4)
     return gca_btn.y;
-//if (button == gp_shoulderl)
-    // no button matches to this...
 if (button == gp_shoulderr)
     return gca_btn.z;
 if (button == start)
@@ -179,5 +173,14 @@ if (button == gp_padd)
     return gca_btn.dp_down;
 if (button == gp_padl)
     return gca_btn.dp_left;
+    
+// polling analog triggers as digital inputs returns the digital
+// press rather than applying a threshold to the analog input
+// presumably this is desirable, also 2x easier to implement
 
+if (button == gp_shoulderrb)
+    return gca_btn.r_digital;
+if (button == gp_shoulderlb)
+    return gca_btn.l_digital;
+    
 return -1; //button provided has no mapping; need to handle as special case

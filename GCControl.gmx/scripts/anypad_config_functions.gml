@@ -16,10 +16,6 @@ global.__anypad_gca_status = 0;
 // gc controllers live in 12-15
 global.__anypad_gca_offset = 12;
 
-// native state
-global.__anypad_enable_native_xinput = false;
-global.__anypad_enable_native_dinput = false;
-
 /*
     GC Adapter Initialization
 */
@@ -114,14 +110,6 @@ else {
 }
 
 
-#define anypad_set_enable_native_dinput
-// anypad_set_enable_native_dinput(bool): int result
-// enable native controllers 4 - 11, which corresponds to 
-// dinput devices on windows
-
-global.__anypad_enable_native_dinput = argument0;
-
-
 #define anypad_tick
 // anypad_tick(): int result
 // result = 0 for no error; nonzero indicates some error.
@@ -136,10 +124,3 @@ if (global.__anypad_enable_gca) {
         global.__anypad_gca_status  = gca_attach();
     }
 }
-
-#define anypad_set_enable_native_xinput
-// anypad_set_enable_native_xinput(bool): int result
-// enable native controllers 0 - 3, which corresponds to 
-// xinput devices on windows
-
-global.__anypad_enable_native_xinput = argument0;
